@@ -1,154 +1,148 @@
-/**
- * ====================================================================
- * 🚀 SMART SALES BOOSTER ENGINE (Generic Version)
- * هذا المحرك يعمل لدى أي متجر سلة بناءً على الإعدادات المحقونة
- * ====================================================================
- */
+/* ====================================================================
+ * 🚀 المساعد الذكي - النسخة العامة (General Version)
+ * هذا الملف يعمل في أي متجر سلة فوراً
+ * ==================================================================== */
 
-// 1. استقبال الإعدادات من المتجر
-// التطبيق سيبحث عن متغير عالمي اسمه (SmartAppConfig) حقنه التطبيق مسبقاً
-const DefaultConfig = {
-    widget: { enabled: false },
-    salesPop: { enabled: false }
-};
+(function() {
+    // 1. الإعدادات الافتراضية (تعمل عند الجميع)
+    const Defaults = {
+        color: "#000000", // لون أسود ملكي يناسب الجميع
+        btnText: "✨ مساعد التسوق",
+        popupTitle: "مرحباً بك! 👋",
+        question: "كيف نقدر نساعدك اليوم؟",
+        options: [
+            { label: "🔥 العروض الجديدة", url: "/offers" },
+            { label: "📦 تتبع طلبي", url: "/orders" },
+            { label: "💬 تواصل معنا", url: "/whatsapp/send" }
+        ],
+        salesPop: {
+            enabled: true,
+            names: ["عميل من الرياض", "عميل من جدة", "عميل من الدمام", "عميل من مكة"],
+            products: ["طلب جديد", "طلب مكتمل", "شراء موثق"]
+        }
+    };
 
-// دمج الإعدادات المحقونة مع الافتراضية لتجنب الأخطاء
-const Config = window.SmartAppConfig || DefaultConfig;
+    // دمج إعدادات التاجر (إذا وجدت) مع الافتراضية
+    const Config = window.SmartAppConfig || Defaults;
 
-window.addEventListener('load', function() {
-    // التأكد من أن التاجر فعل الخيارات قبل التشغيل
-    if (Config.widget && Config.widget.enabled) initSmartWidget();
-    if (Config.salesPop && Config.salesPop.enabled) setTimeout(initSalesPop, 5000);
-    injectGlobalStyles();
-});
+    // 2. تشغيل التطبيق عند التحميل
+    window.addEventListener('load', function() {
+        console.log("🚀 Smart Assistant Started...");
+        initWidget();
+        if (Defaults.salesPop.enabled) setTimeout(initSalesPop, 5000);
+        injectStyles(Config.color);
+    });
 
-// --- 1. منطق المساعد الذكي (عام) ---
-function initSmartWidget() {
-    var widget = document.createElement('div');
-    widget.id = 'smart-widget-container';
-    widget.innerHTML = `
-        <div id="smart-widget-btn" onclick="toggleWidget()">
-            <span>${Config.widget.btn_text || "✨ مساعد التسوق"}</span>
-        </div>
-        <div id="smart-popup" style="display:none;">
-            <div class="popup-header">
-                <h3>${Config.widget.popup_title || "مساعدك الذكي 🤖"}</h3>
-                <span onclick="toggleWidget()" class="close-btn">×</span>
+    // --- بناء المساعد الذكي ---
+    function initWidget() {
+        if (document.getElementById('smart-widget-btn')) return; // منع التكرار
+
+        const widgetHTML = `
+            <div id="smart-widget-btn" onclick="toggleSmartWidget()">
+                <span>${Config.btnText}</span>
             </div>
-            <div id="step-1">
-                <p>${Config.widget.question_text || "كيف نقدر نساعدك اليوم؟"}</p>
-                
-                ${generateButtons()}
-                
+            <div id="smart-popup" style="display:none;">
+                <div class="popup-header">
+                    <h3>${Config.popupTitle}</h3>
+                    <span onclick="toggleSmartWidget()" class="close-btn">×</span>
+                </div>
+                <div class="popup-body">
+                    <p>${Config.question}</p>
+                    ${Config.options.map(opt => 
+                        `<button onclick="window.location.href='${opt.url}'" class="choice-btn">${opt.label}</button>`
+                    ).join('')}
+                </div>
             </div>
-        </div>
-    `;
-    document.body.appendChild(widget);
-}
-
-// دالة لتوليد الأزرار بناءً على عدد الخيارات التي وضعها التاجر
-function generateButtons() {
-    let html = '';
-    // التاجر قد يضع خيارين أو ثلاثة، نحن ندعم ذلك
-    if(Config.widget.options) {
-        Config.widget.options.forEach(opt => {
-            html += `<button onclick="window.location.href='${opt.url}'" class="choice-btn">${opt.label}</button>`;
-        });
-    }
-    return html;
-}
-
-function toggleWidget() {
-    var popup = document.getElementById('smart-popup');
-    var btn = document.getElementById('smart-widget-btn');
-    if (popup.style.display === 'none') {
-        popup.style.display = 'block';
-        btn.style.display = 'none';
-    } else {
-        popup.style.display = 'none';
-        btn.style.display = 'flex';
-    }
-}
-
-// --- 2. منطق إشعارات الشراء (عام) ---
-function initSalesPop() {
-    var notification = document.createElement('div');
-    notification.id = 'sales-notification';
-    notification.innerHTML = `
-        <div class="sales-pop-img"><img id="pop-img" src="" alt=""></div>
-        <div class="sales-pop-content">
-            <p id="pop-text"></p>
-            <span id="pop-time"></span>
-            <div class="verified-badge">✔ شراء موثق</div>
-        </div>
-    `;
-    document.body.appendChild(notification);
-    cycleSales();
-}
-
-function cycleSales() {
-    showNewNotification();
-    var randomTime = Math.floor(Math.random() * (20000 - 10000 + 1) + 10000);
-    setTimeout(cycleSales, randomTime);
-}
-
-function showNewNotification() {
-    if(!Config.salesPop.products || Config.salesPop.products.length === 0) return;
-
-    var notify = document.getElementById('sales-notification');
-    
-    // بيانات عشوائية من مدخلات التاجر
-    var randomName = Config.salesPop.names[Math.floor(Math.random() * Config.salesPop.names.length)];
-    var randomCity = Config.salesPop.cities[Math.floor(Math.random() * Config.salesPop.cities.length)];
-    var randomProduct = Config.salesPop.products[Math.floor(Math.random() * Config.salesPop.products.length)];
-    var randomTime = Math.floor(Math.random() * 9) + 1;
-
-    document.getElementById('pop-text').innerHTML = `<strong>${randomName}</strong> من <strong>${randomCity}</strong> طلب <br>${randomProduct.name}`;
-    document.getElementById('pop-time').innerText = `منذ ${randomTime} دقائق`;
-    // صورة افتراضية إذا لم يضع التاجر صورة
-    document.getElementById('pop-img').src = randomProduct.image || "https://cdn-icons-png.flaticon.com/512/2956/2956820.png";
-
-    notify.classList.add('show-pop');
-    setTimeout(() => { notify.classList.remove('show-pop'); }, 6000);
-}
-
-// --- 3. الستايل (ديناميكي حسب لون التاجر) ---
-function injectGlobalStyles() {
-    var mainColor = Config.main_color || "#000000"; // لون التاجر المفضل
-    var style = document.createElement('style');
-    style.innerHTML = `
-        #smart-widget-btn {
-            position: fixed; bottom: 20px; left: 20px;
-            background: ${mainColor}; color: #fff;
-            padding: 12px 20px; border-radius: 50px; cursor: pointer;
-            z-index: 999999; font-weight: bold; font-family: 'Tajawal', sans-serif;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3); animation: bounce 2s infinite;
-            display: flex; align-items: center; justify-content: center;
-        }
-        #smart-popup {
-            position: fixed; bottom: 80px; left: 20px; width: 300px;
-            background: #fff; border-radius: 15px; box-shadow: 0 5px 25px rgba(0,0,0,0.2);
-            z-index: 999999; font-family: 'Tajawal', sans-serif; overflow: hidden; text-align: center;
-        }
-        .popup-header { background: ${mainColor}; color: #fff; padding: 15px; display: flex; justify-content: space-between; align-items: center;}
-        .choice-btn { display: block; width: 90%; margin: 10px auto; padding: 12px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; transition: 0.3s; font-weight: bold; }
-        .choice-btn:hover { background: ${mainColor}; color: #fff; border-color: ${mainColor}; }
-
-        /* ستايل الإشعارات */
-        #sales-notification {
-            position: fixed; bottom: 20px; right: 20px; background: #fff;
-            width: 300px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.15);
-            display: flex; align-items: center; padding: 15px; z-index: 999990;
-            transform: translateY(150px); transition: all 0.5s;
-            font-family: 'Tajawal', sans-serif; border-left: 4px solid #27ae60; direction: rtl;
-        }
-        #sales-notification.show-pop { transform: translateY(0); }
-        .sales-pop-img { width: 50px; height: 50px; background: #f9f9f9; border-radius: 5px; margin-left: 10px; display: flex; align-items: center; justify-content: center; }
-        .sales-pop-img img { width: 35px; height: 35px; object-fit: contain; }
-        .sales-pop-content p { margin: 0; font-size: 13px; line-height: 1.4; color: #333; }
+        `;
         
-        @keyframes bounce { 0%, 20%, 50%, 80%, 100% {transform: translateY(0);} 40% {transform: translateY(-10px);} 60% {transform: translateY(-5px);} }
-        @media (max-width: 480px) { #sales-notification { width: 90%; right: 5%; bottom: 10px; } }
-    `;
-    document.head.appendChild(style);
-}
+        const div = document.createElement('div');
+        div.innerHTML = widgetHTML;
+        document.body.appendChild(div);
+    }
+
+    // جعل الدالة متاحة عالمياً
+    window.toggleSmartWidget = function() {
+        const popup = document.getElementById('smart-popup');
+        const btn = document.getElementById('smart-widget-btn');
+        if (popup.style.display === 'none') {
+            popup.style.display = 'block';
+            btn.style.display = 'none';
+        } else {
+            popup.style.display = 'none';
+            btn.style.display = 'flex';
+        }
+    };
+
+    // --- بناء إشعارات الطلبات ---
+    function initSalesPop() {
+        const popDiv = document.createElement('div');
+        popDiv.id = 'sales-notification';
+        popDiv.innerHTML = `
+            <div class="pop-icon">🛍️</div>
+            <div class="pop-content">
+                <p id="pop-text"></p>
+                <small id="pop-time">منذ دقيقة</small>
+            </div>
+        `;
+        document.body.appendChild(popDiv);
+        cycleSales();
+    }
+
+    function cycleSales() {
+        const notify = document.getElementById('sales-notification');
+        const randomName = Config.salesPop.names[Math.floor(Math.random() * Config.salesPop.names.length)];
+        const randomAction = Config.salesPop.products[Math.floor(Math.random() * Config.salesPop.products.length)];
+        
+        document.getElementById('pop-text').innerHTML = `<strong>${randomName}</strong> قام بعمل <br>${randomAction}`;
+        
+        notify.classList.add('show-pop');
+        setTimeout(() => notify.classList.remove('show-pop'), 5000); // اختفاء
+        setTimeout(cycleSales, Math.random() * 10000 + 10000); // تكرار عشوائي
+    }
+
+    // --- الستايل (CSS) ---
+    function injectStyles(mainColor) {
+        const style = document.createElement('style');
+        style.innerHTML = `
+            #smart-widget-btn {
+                position: fixed; bottom: 20px; left: 20px;
+                background: ${mainColor}; color: #fff;
+                padding: 12px 20px; border-radius: 50px; cursor: pointer;
+                z-index: 999999; font-family: 'Tajawal', sans-serif;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2); font-weight: bold;
+                display: flex; align-items: center; gap: 8px;
+            }
+            #smart-popup {
+                position: fixed; bottom: 80px; left: 20px; width: 300px;
+                background: #fff; border-radius: 12px; box-shadow: 0 5px 30px rgba(0,0,0,0.15);
+                z-index: 999999; font-family: 'Tajawal', sans-serif; overflow: hidden;
+                text-align: center; border: 1px solid #eee;
+            }
+            .popup-header { background: ${mainColor}; color: #fff; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+            .popup-body { padding: 20px; }
+            .choice-btn {
+                display: block; width: 100%; padding: 12px; margin: 8px 0;
+                background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px;
+                cursor: pointer; font-weight: bold; transition: 0.2s;
+            }
+            .choice-btn:hover { background: ${mainColor}; color: #fff; border-color: ${mainColor}; }
+            
+            /* إشعارات */
+            #sales-notification {
+                position: fixed; bottom: 20px; right: 20px; background: #fff;
+                padding: 12px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+                display: flex; align-items: center; gap: 12px; z-index: 9999;
+                transform: translateY(150%); transition: transform 0.5s;
+                font-family: 'Tajawal', sans-serif; border-right: 4px solid #27ae60;
+                direction: rtl; width: 260px;
+            }
+            #sales-notification.show-pop { transform: translateY(0); }
+            .pop-icon { font-size: 24px; }
+            .pop-content p { margin: 0; font-size: 13px; color: #333; line-height: 1.4; }
+            .pop-content small { color: #888; font-size: 11px; }
+            
+            @media (max-width: 768px) { #sales-notification { left: 20px; right: auto; border-right: none; border-left: 4px solid #27ae60; } }
+        `;
+        document.head.appendChild(style);
+    }
+})();
