@@ -1,0 +1,20 @@
+{
+  "name": "lavista-smart-app",
+  "version": "1.0.0",
+  "description": "تطبيق مساعد لافيستا الذكي",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "@salla.sa/cli": "^2.0.0",
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
